@@ -52,6 +52,7 @@ function [] = epoch_sorting_dyn(channel,data,data_raw,ham)
  end
 
     function redraw() %will be executed each time until epoch == z
+                proba = artefact_prob(windowed_data,epoch);
                 clf
                 hold on
                 
@@ -63,9 +64,10 @@ function [] = epoch_sorting_dyn(channel,data,data_raw,ham)
                 plot(time_vector,data_raw(channel,:,epoch))
                 axis tight
                 
-                title(['Epoch n° ', num2str(epoch)])
+                title(['Epoch n° ', num2str(epoch),' -- P(artefact) = ',num2str(proba)])
                 xlabel('time (ms)')
                 ylabel('Raw EEG voltage')
+                %clear proba
      end
  
 redraw()
