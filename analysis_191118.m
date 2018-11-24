@@ -61,7 +61,7 @@ cd(folder_name) % create a folder with the right name (it's gonna be a mess of 1
 
 for k=1:100
     sorting = sorted_epochs(k);
-    for success=d.(subjects{subject}).labels %we travel through the labels (success or other)
+    success = d.(subjects{subject}).labels(k);
         
          if (sorting==1) && (success==1) %if data is not artefacted and it was an emergency success... 
              epoch_name = [subjects{subject},'_clean_epoch_',num2str(k),'_emergency.mat'];
@@ -81,7 +81,6 @@ for k=1:100
              save(epoch_name,'bad_epoch')
              clear bad_epoch
          end      
-    end
 end
 cd ..
 %name_vect = ['sorting_vector_',subjects{subject},'.mat'];
