@@ -50,7 +50,7 @@ end
 % SKEWNESS
 skwn_max = 0; %2e-16 for a perfect sine wave
 S = 100; %random coefficient
-skwn = skewness(data(epoch,:);
+skwn = skewness(data(epoch,:));
 Dist_sk = S/(1+abs(skwn_max - skwn));
 if abs(skwn)>1
     isskwn=0;
