@@ -47,20 +47,32 @@ function [powerbands,pw_values,pw_ch] = extract_powerbands(subjects,channels,dat
 % The issue with the initially windowed data is that the epoch length is
 % too small (300ms at 500Hz, ie 150 points). Hence our frequency resolution
 % for a single sample is 3.33Hz and this is not good at all... We decide to
-% concatenate all epochs for a given channel. 
+% concatenate all epochs for a given channel.
+
+clear pw_values
+clear powerbands
+clear pw_ch
+
+band_names = {'delta','theta','alpha','beta'};
 
 for sub=1:length(subjects) %we will travel in the input subject list
     
     nb_epochs = numel(fieldnames(datastruct.(subjects{sub}))); 
     %finding the nb of emergency-other epochs (subfields) for each subject
     
-    for channel=1:channels %we go through each epoch
+    for channel=1:length(channels) %we go through each epoch
         concatenated_ch = zeros(nb_epochs*150,1);
-        
+        diffh = 0;
         for epoch=1:nb_epochs
             ep_name = ['epoch',num2str(epoch)]; %therefore, this is our epoch field name
             EP_raw =  datastruct.(subjects{sub}).(ep_name);
-            concatenated_ch((epoch-1)*150+1:epoch*150,1) = EP_raw(channel,:);
+            concatenated_ch((epoch-1)*150+1:epoch*150,1) = EP_raw(channels{channel},:)-diffh;
+            
+            if epoch ~= nb_epochs
+                ep_name_next = ['epoch',num2str(epoch+1)];
+                EP_raw_next = datastruct.(subjects{sub}).(ep_name_next);
+                diffh =  EP_raw_next(channels{channel},1) - concatenated_ch(epoch*150,1);
+            end
         end
         
         Fast_fourier = fft(concatenated_ch,length(concatenated_ch)); %computes the fft
@@ -70,10 +82,12 @@ for sub=1:length(subjects) %we will travel in the input subject list
         f_res = fs/length(concatenated_ch);
         pts = 1/f_res; %number of points for 1 hz
         
-        pw_values.(subjects{sub})(channel,1) = trapz(FF(1:round(4*pts)));
-        pw_values.(subjects{sub})(channel,2) = trapz(FF(round(4*pts):round(8*pts)));
-        pw_values.(subjects{sub})(channel,3) = trapz(FF(round(8*pts):round(12*pts)));
-        pw_values.(subjects{sub})(channel,4) = trapz(FF(round(12*pts):round(25*pts)));
+        
+        total = trapz(FF); %to compute the relative magnitude
+        pw_values.(subjects{sub}).(band_names{1})(channel,1) = trapz(FF(1:round(4*pts)))/total;
+        pw_values.(subjects{sub}).(band_names{2})(channel,1) = trapz(FF(round(4*pts):round(8*pts)))/total;
+        pw_values.(subjects{sub}).(band_names{3})(channel,1) = trapz(FF(round(8*pts):round(12*pts)))/total;
+        pw_values.(subjects{sub}).(band_names{4})(channel,1) = trapz(FF(round(12*pts):round(25*pts)))/total;
  
     end
 end
@@ -88,9 +102,12 @@ end
 
 
 for sub=1:length(subjects) %we loop through subjects again
+    all_ch = zeros(length(channels),1);
     for band=1:4
-        all_ch = pw_values.(subjects{sub})(:,band);
-        pw_ch.(subjects{sub})(band) = mean(all_ch);
+        for channel=1:length(channels)
+            all_ch(channel) = pw_values.(subjects{sub}).(band_names{band})(channel,1);
+        end
+    pw_ch.(subjects{sub})(band) = mean(all_ch);
     end
 end
 

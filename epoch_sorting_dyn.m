@@ -89,6 +89,6 @@ redraw()
             end
             redraw()
        end
-   global sorted_epochs
+global sorted_epochs
 end
  
