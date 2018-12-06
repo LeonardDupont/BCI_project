@@ -14,12 +14,11 @@ for sub = 1:length(subjects)
 end
 disp(epochs)
 
-%%
-training = [6,8,13,14];
-test = [1,2,5,11]; %we now have a 80% training and 20% test epoch distribution
 
 
 
 
 
 
+
+    
