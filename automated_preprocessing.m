@@ -1,4 +1,4 @@
-function [clean] = automated_preprocessing(raw_data,channel,fs)
+function [clean] = automated_preprocessing(raw_data,channel,fs,window_and_filt)
 % This function will be implemented in the offline BCI
 % to filter the data, apply a hamming window and test
 % for the presence of artefacts. Indeed, while we did 
@@ -7,6 +7,28 @@ function [clean] = automated_preprocessing(raw_data,channel,fs)
 %
 % We will use a threshold detection, a blocking detection, skewness and
 % kurtosis.
+%%%%%%%%%%
+%
+% INPUT % 
+%
+% raw_data     AN EPOCH of y points with x channels
+%
+% channel      the channel number to take (probably Fp1)
+%
+% fs           sampling rate
+%
+% w_and_f      1 if you want to BPF and apply hamming to your data, 0
+%              otherwise
+% 
+% 
+% OUTPUT %
+%
+% clean      0 if artifact, 1 if clean
+%
+% data       data that went through the BPF and the Hamming window
+%
+%%%%%%%%%%
+
 
 [~,y] = size(raw_data);
 clean = 1; 
@@ -29,22 +51,19 @@ end
 
 % ALL NEXT STEPS REQUIRE FITLERING AND HAMMING
 
-%%%% FILTER 
-data_filt = zeros(1,y); %for one channel
-f1=1; %low(baseline removed)
-f2=45; %high(electric artefact and above)
-[num,dem]=butter(2,[f1,f2]*2/fs);
-data_filt(1,:) = filtfilt(num,dem,raw_data(channel,:));
+if window_and_filt
 
-%%%% HAMMING 
-h_window = hamming(y);
-windowed_filt_data = (h_window)'.*data_filt(channel,:);
+    windowed_f_d = filt_and_ham_epoch(raw_data,fs);
+    windowed_filt_data = windowed_f_d(channel,:);
+else
+    windowed_filt_data = raw_data(channel,:);
+end
 
 
 % THRESHOLD DETECTION 
-peak_threshold = 1.6e4; %threshold for peak detection 
-[~, ~,~,h1] = findpeaks(windowed_filt_data(epoch,:), 'MinPeakProminence', peak_threshold); % positive peaks
-[~, ~,~,h2] = findpeaks(-windowed_filt_data(epoch,:), 'MinPeakProminence', peak_threshold); % negative peaks (flip data)
+peak_threshold = 1.7e4; %threshold for peak detection 
+[~, ~,~,h1] = findpeaks(windowed_filt_data, 'MinPeakProminence', peak_threshold); % positive peaks
+[~, ~,~,h2] = findpeaks(-windowed_filt_data, 'MinPeakProminence', peak_threshold); % negative peaks (flip data)
 if ~isempty(h1) && ~isempty(h2)
     clean = 0;
     return
@@ -52,7 +71,7 @@ end
 
 % SYMMETRY
 skwn = skewness(windowed_filt_data);
-if skwn < 1e-5
+if abs(skwn) < 1e-5
     clean = 0;
     return
 end
