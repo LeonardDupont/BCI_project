@@ -1,7 +1,7 @@
-function [predictions,expectations,confusion] = func_online_BCI(model_name,s_EEG,display,waiting_time)
+function [predictions,expectations,confusion,time_needed] = func_online_BCI(model_name,s_EEG,display,waiting_time,cheat)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @ Inssia Delawy, Edwin Gatier, Matthieu Sanchez, Léonard Dupont
+% @ Inssia Dewany, Edwin Gatier, Matthieu Sanchez, Léonard Dupont
 % 2018 BIN Master, BCI module - ESPCI & ENS Paris
 %
 % This function uses the extracted SVM algorithm from SIGMA box and applies
@@ -16,10 +16,12 @@ function [predictions,expectations,confusion] = func_online_BCI(model_name,s_EEG
 %              display            1 or 0 depending if you want to see
 %                                 the live progress through epochs
 %              waiting_time       time between each epoch (s)
+%              cheat              if 1, the programme will cheat
 %
 % OUTPUT       predictions        what the SVM predicted
 %              expectations       actually corresponds to s_EEG.labels
 %              confusion          matrix with true +/- and false +/-
+%              time_needed        list of times needed to predict the label
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -35,13 +37,15 @@ channel_Fp1 = 17;
 fs = 500; %Hz
 
 predictions = zeros(1,z);
+time_needed = zeros(1,z);
 
 
 %%% 1 - We are going to feed our SVM with epochs to classify at regular
 %%% time intervals
 for epoch=1:z
     
-    test_data = raw_data(:,:,epoch);   
+    test_data = raw_data(:,:,epoch); 
+    tic %start timer
     clean= automated_preprocessing(test_data,channel_Fp1,fs,0); %function also calls in artefact prob
     
     if ~clean %if it's not the case
@@ -51,14 +55,19 @@ for epoch=1:z
         predictions(epoch) = 0;
         expectations(epoch) = 0; %this will not be taken into account in the confusion matrix
     else
-        filt_ham_data = filt_and_ham_epoch(test_data,fs); %we get the filtered (BPF) + hamming-treated epoch
-        feature_matrix = bfeature_extraction_BCI(filt_ham_data,nb_features,filt,mdl.init_method); %extracting 9 best feature values
-        predictions(epoch) = predict(SVM,feature_matrix); %and make the prediction
+        if ~cheat
+            filt_ham_data = filt_and_ham_epoch(test_data,fs); %we get the filtered (BPF) + hamming-treated epoch
+            feature_matrix = bfeature_extraction_BCI(filt_ham_data,nb_features,filt,mdl.init_method); %extracting 9 best feature values
+            predictions(epoch) = predict(SVM,feature_matrix); %and make the prediction
+        else
+            predictions(epoch) = est_dist_draw(expectations);
+        end
         if display
             disp(['Predicted value by the SVM is ',num2str(predictions(epoch)), '. Expected value was ', num2str(expectations(epoch))]) %display result live
         end  
     end
     
+    time_needed(1,epoch) = toc;
     pause(waiting_time); %we make a 2s pause
     
 end
